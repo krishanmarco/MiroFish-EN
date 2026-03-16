@@ -32,6 +32,9 @@ dependencies = [
     # Utilities
     "python-dotenv>=1.0.0",
     "pydantic>=2.0.0",
+
+    # PyTorch CPU-only (used by OASIS simulation)
+    "torch>=2.0.0",
 ]
 
 [project.optional-dependencies]
@@ -50,6 +53,14 @@ dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",
 ]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
 
 [tool.uv]
 override-dependencies = [
