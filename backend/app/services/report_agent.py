@@ -23,10 +23,10 @@ from ..utils.llm_client import LLMClient
 from ..utils.logger import get_logger
 from .zep_tools import (
     ZepToolsService,
-    Searchresults as SearchResult,
-    InsightForgeresults as InsightForgeResult,
-    Panoramaresults as PanoramaResult,
-    Interviewresults as InterviewResult
+    SearchResult,
+    InsightForgeResult,
+    PanoramaResult,
+    InterviewResult
 )
 
 logger = get_logger('mirofish.report_agent')
@@ -1067,7 +1067,7 @@ class ReportAgent:
         """
         Parse tool calls from LLM response
 
-        Supported formats (by priority)：
+        Supported formats (by priority):
         1. <tool_call>{"name": "tool_name", "parameters": {...}}</tool_call>
         2. Raw JSON (entire response or single line is a tool call JSON)
         """
@@ -1206,7 +1206,7 @@ class ReportAgent:
             
         except Exception as e:
             logger.error(f"Outline planning failed: {str(e)}")
-            # Return default outline（3sections，as fallback）
+            # Return default outline (3 sections, as fallback)
             return ReportOutline(
                 title="Future prediction report",
                 summary="Future trends and risk analysis based on simulation predictions",
@@ -1228,7 +1228,7 @@ class ReportAgent:
         """
         Use ReACT mode to generate individual section content
         
-        ReACT loop：
+        ReACT loop:
         1. Thought - analyze what information is needed
         2. Action - call tools to get information
         3. Observation - analyze tool return results
@@ -1299,14 +1299,14 @@ class ReportAgent:
                     f"Deep retrieval and writing in progress ({tool_calls_count}/{self.MAX_TOOL_CALLS_PER_SECTION})"
                 )
             
-            # CallLLM
+            # Call LLM
             response = self.llm.chat(
                 messages=messages,
                 temperature=0.5,
                 max_tokens=4096
             )
 
-            # Check if LLM return is None（API exception or empty content）
+            # Check if LLM return is None (API exception or empty content)
             if response is None:
                 logger.warning(f"Section {section.title} {iteration + 1}th iteration: LLM returned None")
                 # If there are more iterations, add message and retry
@@ -1314,17 +1314,17 @@ class ReportAgent:
                     messages.append({"role": "assistant", "content": "(Response is empty)"})
                     messages.append({"role": "user", "content": "Please continue to generate content."})
                     continue
-                # Last iteration also returned None，Jump out of loop and enter forced completion
+                # Last iteration also returned None, jump out of loop and enter forced completion
                 break
 
-            logger.debug(f"LLMResponse: {response[:200]}...")
+            logger.debug(f"LLM Response: {response[:200]}...")
 
             # Parse once, reuse result
             tool_calls = self._parse_tool_calls(response)
             has_tool_calls = bool(tool_calls)
             has_final_answer = "Final Answer:" in response
 
-            # ── Conflict handling：LLM simultaneously output tool call and Final Answer ──
+            # ── Conflict handling: LLM simultaneously output tool call and Final Answer ──
             if has_tool_calls and has_final_answer:
                 conflict_retries += 1
                 logger.warning(
@@ -1333,7 +1333,7 @@ class ReportAgent:
                 )
 
                 if conflict_retries <= 2:
-                    # First two times：Discard this response and require LLM to reply again
+                    # First two times: Discard this response and require LLM to reply again
                     messages.append({"role": "assistant", "content": response})
                     messages.append({
                         "role": "user",
@@ -1347,7 +1347,7 @@ class ReportAgent:
                     })
                     continue
                 else:
-                    # Third time：Downgrade processing, truncate to the first tool call，Force execution
+                    # Third time: Downgrade processing, truncate to the first tool call, force execution
                     logger.warning(
                         f"Section {section.title}: Consecutive {conflict_retries} times conflict,"
                         "Downgrade to truncate and execute first tool call"
@@ -1390,7 +1390,7 @@ class ReportAgent:
 
                 # Normal termination
                 final_answer = response.split("Final Answer:")[-1].strip()
-                logger.info(f"Section {section.title} generation complete (tool calls: {tool_calls_count}times)")
+                logger.info(f"Section {section.title} generation complete (tool calls: {tool_calls_count} times)")
 
                 if self.report_logger:
                     self.report_logger.log_section_content(
@@ -1415,10 +1415,10 @@ class ReportAgent:
                     })
                     continue
 
-                # Only execute the first onetool call
+                # Only execute the first tool call
                 call = tool_calls[0]
                 if len(tool_calls) > 1:
-                    logger.info(f"LLM Try to call {len(tool_calls)} tools,Only execute the first one: {call['name']}")
+                    logger.info(f"LLM tried to call {len(tool_calls)} tools, only execute the first one: {call['name']}")
 
                 if self.report_logger:
                     self.report_logger.log_tool_call(
@@ -1471,7 +1471,7 @@ class ReportAgent:
             messages.append({"role": "assistant", "content": response})
 
             if tool_calls_count < min_tool_calls:
-                # Insufficient tool call count，Recommend unused tools
+                # Insufficient tool call count, recommend unused tools
                 unused_tools = all_tools - used_tools
                 unused_hint = f"(These tools have not been used yet, recommend trying them: {', '.join(unused_tools)})" if unused_tools else ""
 
@@ -1485,7 +1485,7 @@ class ReportAgent:
                 })
                 continue
 
-            # Tool calls are sufficient，LLM output content but withoutwithout "Final Answer:" prefix
+            # Tool calls are sufficient, LLM output content but without "Final Answer:" prefix
             # Directly convert this content as final answer, no longer empty rotation
             logger.info(f"Section {section.title} No 'Final Answer:' prefix detected, directly adopt LLM output as final content (tool calls: {tool_calls_count})")
             final_answer = response.strip()
@@ -1499,8 +1499,8 @@ class ReportAgent:
                 )
             return final_answer
         
-        # Reached maximum iterationcount,Force generate content
-        logger.warning(f"Section {section.title} Reached maximum iterationcount,Force generate")
+        # Reached maximum iteration count, force generate content
+        logger.warning(f"Section {section.title} reached maximum iteration count, force generate")
         messages.append({"role": "user", "content": REACT_FORCE_FINAL_MSG})
         
         response = self.llm.chat(
@@ -1550,14 +1550,14 @@ class ReportAgent:
         
         Args:
             progress_callback: Progress callback function (stage, progress, message)
-            report_id: Report ID（Optional，If not passed, auto-generate）
+            report_id: Report ID (optional, if not passed, auto-generate)
             
         Returns:
             Report: Complete report
         """
         import uuid
         
-        # If not passed report_id，auto-generate
+        # If not passed report_id, auto-generate
         if not report_id:
             report_id = f"report_{uuid.uuid4().hex[:12]}"
         start_time = datetime.now()
@@ -1586,7 +1586,7 @@ class ReportAgent:
                 simulation_requirement=self.simulation_requirement
             )
             
-            # Initialize console logger（console_log.txt）
+            # Initialize console logger (console_log.txt)
             self.console_logger = ReportConsoleLogger(report_id)
             
             ReportManager.update_progress(
@@ -1620,14 +1620,14 @@ class ReportAgent:
             # Save outline to file
             ReportManager.save_outline(report_id, outline)
             ReportManager.update_progress(
-                report_id, "planning", 15, f"Outline planning complete，Total {len(outline.sections)} sections",
+                report_id, "planning", 15, f"Outline planning complete, total {len(outline.sections)} sections",
                 completed_sections=[]
             )
             ReportManager.save_report(report)
             
             logger.info(f"Outline saved to file: {report_id}/outline.json")
             
-            # Phase 2: Generate chapter by chapter（Save by section）
+            # Phase 2: Generate chapter by chapter (save by section)
             report.status = ReportStatus.GENERATING
             
             total_sections = len(outline.sections)
@@ -1721,14 +1721,14 @@ class ReportAgent:
             # Save final report
             ReportManager.save_report(report)
             ReportManager.update_progress(
-                report_id, "completed", 100, "Reportgeneration complete",
+                report_id, "completed", 100, "Report generation complete",
                 completed_sections=completed_section_titles
             )
             
             if progress_callback:
-                progress_callback("completed", 100, "Reportgeneration complete")
+                progress_callback("completed", 100, "Report generation complete")
             
-            logger.info(f"Reportgeneration complete: {report_id}")
+            logger.info(f"Report generation complete: {report_id}")
             
             # Close console logger
             if self.console_logger:
@@ -1738,7 +1738,7 @@ class ReportAgent:
             return report
             
         except Exception as e:
-            logger.error(f"Reportgeneration failed: {str(e)}")
+            logger.error(f"Report generation failed: {str(e)}")
             report.status = ReportStatus.FAILED
             report.error = str(e)
             
@@ -1750,7 +1750,7 @@ class ReportAgent:
             try:
                 ReportManager.save_report(report)
                 ReportManager.update_progress(
-                    report_id, "failed", -1, f"Reportgeneration failed: {str(e)}",
+                    report_id, "failed", -1, f"Report generation failed: {str(e)}",
                     completed_sections=completed_section_titles
                 )
             except Exception:
@@ -1793,7 +1793,7 @@ class ReportAgent:
         try:
             report = ReportManager.get_report_by_simulation(self.simulation_id)
             if report and report.markdown_content:
-                # Limit report length，Avoid context too long
+                # Limit report length, avoid context too long
                 report_content = report.markdown_content[:15000]
                 if len(report.markdown_content) > 15000:
                     report_content += "\n\n... [Report content has been truncated] ..."
@@ -1819,7 +1819,7 @@ class ReportAgent:
             "content": message
         })
         
-        # ReACT loop（simplified version）
+        # ReACT loop (simplified version)
         tool_calls_made = []
         max_iterations = 2  # Reduce iteration rounds
         
@@ -1833,7 +1833,7 @@ class ReportAgent:
             tool_calls = self._parse_tool_calls(response)
             
             if not tool_calls:
-                # No tool calls，Directly return response
+                # No tool calls, directly return response
                 clean_response = re.sub(r'<tool_call>.*?</tool_call>', '', response, flags=re.DOTALL)
                 clean_response = re.sub(r'\[TOOL_CALL\].*?\)', '', clean_response)
                 
@@ -1843,7 +1843,7 @@ class ReportAgent:
                     "sources": [tc.get("parameters", {}).get("query", "") for tc in tool_calls_made]
                 }
             
-            # Execute tool call（Limit quantity）
+            # Execute tool call (limit quantity)
             tool_results = []
             for call in tool_calls[:1]:  # Execute at most 1 tool call per round
                 if len(tool_calls_made) >= self.MAX_TOOL_CALLS_PER_CHAT:
@@ -1857,13 +1857,13 @@ class ReportAgent:
             
             # Convert result and add to messages
             messages.append({"role": "assistant", "content": response})
-            observation = "\n".join([f"[{r['tool']}Result]\n{r['result']}" for r in tool_results])
+            observation = "\n".join([f"[{r['tool']} Result]\n{r['result']}" for r in tool_results])
             messages.append({
                 "role": "user",
                 "content": observation + CHAT_OBSERVATION_SUFFIX
             })
         
-        # Reached maximum iteration，Get final response
+        # Reached maximum iteration, get final response
         final_response = self.llm.chat(
             messages=messages,
             temperature=0.5
@@ -1886,10 +1886,10 @@ class ReportManager:
     
     Responsible for report persistence storage and retrieval
     
-    File structure (section output)：
+    File structure (section output):
     reports/
       {report_id}/
-        meta.json          - Report metadataand status
+        meta.json          - Report metadata and status
         outline.json       - Report outline
         progress.json      - Generate progress
         section_01.md      - 1st section
@@ -1898,7 +1898,7 @@ class ReportManager:
         full_report.md     - Complete report
     """
     
-    # Reportstorage directory
+    # Report storage directory
     REPORTS_DIR = os.path.join(Config.UPLOAD_FOLDER, 'reports')
     
     @classmethod
@@ -1958,17 +1958,17 @@ class ReportManager:
         """
         Get console log content
         
-        This is console output log during report generation process(INFO, WARNING, etc)，
-        Different from agent_log.jsonl structured logs.
-        
+        This is console output log during report generation process (INFO, WARNING, etc),
+        different from agent_log.jsonl structured logs.
+
         Args:
             report_id: Report ID
-            from_line: From which line to start reading（for incremental get，0 means start from beginning）
+            from_line: From which line to start reading (for incremental get, 0 means start from beginning)
             
         Returns:
             {
                 "logs": [List of log lines],
-                "total_lines": Totalnumber of lines,
+                "total_lines": Total number of lines,
                 "from_line": Starting line number,
                 "has_more": Whether there are more logs
             }
@@ -1990,7 +1990,7 @@ class ReportManager:
             for i, line in enumerate(f):
                 total_lines = i + 1
                 if i >= from_line:
-                    # keep original log line，remove trailing newline
+                    # keep original log line, remove trailing newline
                     logs.append(line.rstrip('\n\r'))
         
         return {
@@ -2021,12 +2021,12 @@ class ReportManager:
         
         Args:
             report_id: Report ID
-            from_line: From which line to start reading（for incremental get，0 means start from beginning）
-            
+            from_line: From which line to start reading (for incremental get, 0 means start from beginning)
+
         Returns:
             {
                 "logs": [List of log items],
-                "total_lines": Totalnumber of lines,
+                "total_lines": Total number of lines,
                 "from_line": Starting line number,
                 "has_more": Whether there are more logs
             }
@@ -2088,7 +2088,7 @@ class ReportManager:
         with open(cls._get_outline_path(report_id), 'w', encoding='utf-8') as f:
             json.dump(outline.to_dict(), f, ensure_ascii=False, indent=2)
         
-        logger.info(f"Outlinesaved: {report_id}")
+        logger.info(f"Outline saved: {report_id}")
     
     @classmethod
     def save_section(
@@ -2100,12 +2100,12 @@ class ReportManager:
         """
         Save individual section
 
-        Call immediately after each section generation complete，Implement section output
+        Call immediately after each section generation complete, implements section output.
 
         Args:
             report_id: Report ID
-            section_index: Section index（from 1 start）
-            section: SectionObject
+            section_index: Section index (from 1 start)
+            section: Section object
 
         Returns:
             Path to saved file
@@ -2271,7 +2271,7 @@ class ReportManager:
         """
         Assemble complete report
         
-        Assemble from saved section files complete report，and perform title cleanup
+        Assemble from saved section files complete report, and perform title cleanup
         """
         folder = cls._get_report_folder(report_id)
         
@@ -2302,7 +2302,7 @@ class ReportManager:
         Post-process report content
         
         1. Remove duplicate titles
-        2. Keep report main title (#) and section title (##)，Remove other levels of titles(###, ####etc)
+        2. Keep report main title (#) and section title (##), remove other levels of titles (###, #### etc)
         3. Clean up extra blank lines and separators
         
         Args:
@@ -2353,7 +2353,7 @@ class ReportManager:
                         i += 1
                     continue
                 
-                # Title level processing：
+                # Title level processing:
                 # - # (level=1) Only keep report main title
                 # - ## (level=2) Keep section title
                 # - ### and below (level>=3) Convert to bold text
@@ -2427,7 +2427,7 @@ class ReportManager:
         """Save report metadata and complete report"""
         cls._ensure_report_folder(report.report_id)
         
-        # Save metadataJSON
+        # Save metadata JSON
         with open(cls._get_report_path(report.report_id), 'w', encoding='utf-8') as f:
             json.dump(report.to_dict(), f, ensure_ascii=False, indent=2)
         
@@ -2440,15 +2440,15 @@ class ReportManager:
             with open(cls._get_report_markdown_path(report.report_id), 'w', encoding='utf-8') as f:
                 f.write(report.markdown_content)
         
-        logger.info(f"Reportsaved: {report.report_id}")
+        logger.info(f"Report saved: {report.report_id}")
     
     @classmethod
     def get_report(cls, report_id: str) -> Optional[Report]:
-        """GetReport"""
+        """Get report"""
         path = cls._get_report_path(report_id)
         
         if not os.path.exists(path):
-            # Backward compatible format：Check files directly stored in reports directory
+            # Backward compatible format: check files directly stored in reports directory
             old_path = os.path.join(cls.REPORTS_DIR, f"{report_id}.json")
             if os.path.exists(old_path):
                 path = old_path
@@ -2502,7 +2502,7 @@ class ReportManager:
         
         for item in os.listdir(cls.REPORTS_DIR):
             item_path = os.path.join(cls.REPORTS_DIR, item)
-            # New format：folder
+            # New format: folder
             if os.path.isdir(item_path):
                 report = cls.get_report(item)
                 if report and report.simulation_id == simulation_id:
@@ -2524,7 +2524,7 @@ class ReportManager:
         reports = []
         for item in os.listdir(cls.REPORTS_DIR):
             item_path = os.path.join(cls.REPORTS_DIR, item)
-            # New format：folder
+            # New format: folder
             if os.path.isdir(item_path):
                 report = cls.get_report(item)
                 if report:
@@ -2556,7 +2556,7 @@ class ReportManager:
             logger.info(f"Report folder deleted: {report_id}")
             return True
         
-        # Backward compatible format：Delete individual files
+        # Backward compatible format: delete individual files
         deleted = False
         old_json_path = os.path.join(cls.REPORTS_DIR, f"{report_id}.json")
         old_md_path = os.path.join(cls.REPORTS_DIR, f"{report_id}.md")

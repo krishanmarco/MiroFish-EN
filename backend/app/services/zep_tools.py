@@ -24,7 +24,7 @@ logger = get_logger('mirofish.zep_tools')
 
 
 @dataclass
-class Searchresults:
+class SearchResult:
     """Search results"""
     facts: List[str]
     edges: List[Dict[str, Any]]
@@ -135,7 +135,7 @@ class EdgeInfo:
 
 
 @dataclass
-class InsightForgeresults:
+class InsightForgeResult:
     """
     Deep insight retrieval result (InsightForge)
     Contains multiple sub-questions retrieval result, and comprehensive analysis
@@ -211,7 +211,7 @@ class InsightForgeresults:
 
 
 @dataclass
-class Panoramaresults:
+class PanoramaResult:
     """
     Breadth search result (Panorama)
     Contains all related information, including expired content
@@ -281,7 +281,7 @@ class Panoramaresults:
 
 
 @dataclass
-class agentsInterview:
+class AgentInterview:
     """Individual agent interview results"""
     agent_name: str
     agent_role: str  # Role type (such as: students, teachers, media, etc)
@@ -339,7 +339,7 @@ class agentsInterview:
 
 
 @dataclass
-class Interviewresults:
+class InterviewResult:
     """
     Interview results (Interview)
     Contain interview answers from multiple simulation agents
@@ -350,7 +350,7 @@ class Interviewresults:
     # Selected agent for interview
     selected_agents: List[Dict[str, Any]] = field(default_factory=list)
     # Interview answers from each agent
-    interviews: List[agentsInterview] = field(default_factory=list)
+    interviews: List[AgentInterview] = field(default_factory=list)
     
     # Reason for selecting agents
     selection_reasoning: str = ""
@@ -469,7 +469,7 @@ class ZepToolsService:
         query: str, 
         limit: int = 10,
         scope: str = "edges"
-    ) -> Searchresults:
+    ) -> SearchResult:
         """
         Graph semantic search
         
@@ -483,7 +483,7 @@ class ZepToolsService:
             scope: Search range, "edges" or "nodes"
             
         Returns:
-            Searchresults: Searchresults
+            SearchResult: SearchResult
         """
         logger.info(f"GraphSearch: graph_id={graph_id}, query={query[:50]}...")
         
@@ -530,9 +530,9 @@ class ZepToolsService:
                     if hasattr(node, 'summary') and node.summary:
                         facts.append(f"[{node.name}]: {node.summary}")
             
-            logger.info(f"Searchcomplete: Found {len(facts)} related facts")
+            logger.info(f"Search complete: Found {len(facts)} related facts")
             
-            return Searchresults(
+            return SearchResult(
                 facts=facts,
                 edges=edges,
                 nodes=nodes,
@@ -551,7 +551,7 @@ class ZepToolsService:
         query: str, 
         limit: int = 10,
         scope: str = "edges"
-    ) -> Searchresults:
+    ) -> SearchResult:
         """
         Local keyword matching search (as Search API downgrade plan)
         
@@ -564,7 +564,7 @@ class ZepToolsService:
             scope: Search range
             
         Returns:
-            Searchresults: Searchresults
+            SearchResult: SearchResult
         """
         logger.info(f"Use local search: query={query[:30]}...")
         
@@ -641,7 +641,7 @@ class ZepToolsService:
         except Exception as e:
             logger.error(f"Local search failed: {str(e)}")
         
-        return Searchresults(
+        return SearchResult(
             facts=facts,
             edges=edges_result,
             nodes=nodes_result,
@@ -951,7 +951,7 @@ class ZepToolsService:
         simulation_requirement: str,
         report_context: str = "",
         max_sub_queries: int = 5
-    ) -> InsightForgeresults:
+    ) -> InsightForgeResult:
         """
         [InsightForge - Deep insight retrieval]
         
@@ -970,11 +970,11 @@ class ZepToolsService:
             max_sub_queries: Maximum sub-question quantity
             
         Returns:
-            InsightForgeresults: Deep insight retrieval result
+            InsightForgeResult: Deep insight retrieval result
         """
         logger.info(f"InsightForge Deep insight retrieval: {query[:50]}...")
         
-        result = InsightForgeresults(
+        result = InsightForgeResult(
             query=query,
             simulation_requirement=simulation_requirement,
             sub_queries=[]
@@ -1150,7 +1150,7 @@ Return a JSON format sub-questions list."""
         query: str,
         include_expired: bool = True,
         limit: int = 50
-    ) -> Panoramaresults:
+    ) -> PanoramaResult:
         """
         [PanoramaSearch - Breadth search]
         
@@ -1168,11 +1168,11 @@ Return a JSON format sub-questions list."""
             limit: Number of results to return limit
             
         Returns:
-            Panoramaresults: Breadth search result
+            PanoramaResult: Breadth search result
         """
         logger.info(f"PanoramaSearch Breadth search: {query[:50]}...")
         
-        result = Panoramaresults(query=query)
+        result = PanoramaResult(query=query)
         
         # Get all nodes
         all_nodes = self.get_all_nodes(graph_id)
@@ -1241,7 +1241,7 @@ Return a JSON format sub-questions list."""
         graph_id: str,
         query: str,
         limit: int = 10
-    ) -> Searchresults:
+    ) -> SearchResult:
         """
         [QuickSearch - Simple search]
         
@@ -1256,7 +1256,7 @@ Return a JSON format sub-questions list."""
             limit: Number of results to return
             
         Returns:
-            Searchresults: Searchresults
+            SearchResult: SearchResult
         """
         logger.info(f"QuickSearch Simple search: {query[:50]}...")
         
@@ -1278,7 +1278,7 @@ Return a JSON format sub-questions list."""
         simulation_requirement: str = "",
         max_agents: int = 5,
         custom_questions: List[str] = None
-    ) -> Interviewresults:
+    ) -> InterviewResult:
         """
         [InterviewAgents - Deep interview]
 
@@ -1304,13 +1304,13 @@ Return a JSON format sub-questions list."""
             custom_questions: Custom interview questions (optional, auto-generated if not provided)
             
         Returns:
-            Interviewresults: Interview results
+            InterviewResult: Interview results
         """
         from .simulation_runner import SimulationRunner
         
         logger.info(f"Interview agents deep interview(API): {interview_requirement[:50]}...")
         
-        result = Interviewresults(
+        result = InterviewResult(
             interview_topic=interview_requirement,
             interview_questions=custom_questions or []
         )
@@ -1449,7 +1449,7 @@ Return a JSON format sub-questions list."""
                     paired += re.findall(r'\u300c([^\u300c\u300d]{15,100})\u300d', clean_text)
                     key_quotes = [q for q in paired if not re.match(r'^[,;:]', q)][:3]
                 
-                interview = agentsInterview(
+                interview = AgentInterview(
                     agent_name=agent_name,
                     agent_role=agent_role,
                     agent_bio=agent_bio[:1000],  # expand bio lengthlimit
@@ -1683,7 +1683,7 @@ Please generate 3-5 interview questions."""
     
     def _generate_interview_summary(
         self,
-        interviews: List[agentsInterview],
+        interviews: List[AgentInterview],
         interview_requirement: str
     ) -> str:
         """Generate interview summary"""

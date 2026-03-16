@@ -1,11 +1,11 @@
 """
-IPC
-Flask
+Simulation IPC (Inter-Process Communication)
+File-based IPC mechanism between Flask backend and simulation processes.
 
-/：
-1. Flask commands/ 
-2. ， responses/ 
-3. Flask
+Communication flow:
+1. Flask writes command JSON files to the commands/ directory
+2. Simulation process polls for commands, executes them, writes responses to responses/
+3. Flask polls for response files and returns results
 """
 
 import os
@@ -23,14 +23,14 @@ logger = get_logger('mirofish.simulation_ipc')
 
 
 class CommandType(str, Enum):
-    """"""
-    INTERVIEW = "interview"           # Agent
-    BATCH_INTERVIEW = "batch_interview"  # 
-    CLOSE_ENV = "close_env"           # 
+    """IPC command types"""
+    INTERVIEW = "interview"           # Interview a single Agent
+    BATCH_INTERVIEW = "batch_interview"  # Batch interview multiple Agents
+    CLOSE_ENV = "close_env"           # Close the simulation environment
 
 
 class CommandStatus(str, Enum):
-    """"""
+    """IPC command status"""
     PENDING = "pending"
     PROCESSING = "processing"
     COMPLETED = "completed"
@@ -39,12 +39,12 @@ class CommandStatus(str, Enum):
 
 @dataclass
 class IPCCommand:
-    """IPC"""
+    """IPC command object"""
     command_id: str
     command_type: CommandType
     args: Dict[str, Any]
     timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "command_id": self.command_id,
@@ -52,7 +52,7 @@ class IPCCommand:
             "args": self.args,
             "timestamp": self.timestamp
         }
-    
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'IPCCommand':
         return cls(
@@ -65,13 +65,13 @@ class IPCCommand:
 
 @dataclass
 class IPCResponse:
-    """IPC"""
+    """IPC response object"""
     command_id: str
     status: CommandStatus
     result: Optional[Dict[str, Any]] = None
     error: Optional[str] = None
     timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "command_id": self.command_id,
@@ -80,7 +80,7 @@ class IPCResponse:
             "error": self.error,
             "timestamp": self.timestamp
         }
-    
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'IPCResponse':
         return cls(
@@ -94,26 +94,26 @@ class IPCResponse:
 
 class SimulationIPCClient:
     """
-    IPC（Flask）
-    
-    
+    IPC Client (used by Flask backend)
+
+    Sends commands and waits for responses via file-based polling.
     """
-    
+
     def __init__(self, simulation_dir: str):
         """
-        IPC
-        
+        Initialize IPC client.
+
         Args:
-            simulation_dir: 
+            simulation_dir: Simulation data directory
         """
         self.simulation_dir = simulation_dir
         self.commands_dir = os.path.join(simulation_dir, "ipc_commands")
         self.responses_dir = os.path.join(simulation_dir, "ipc_responses")
-        
-        # 
+
+        # Ensure directories exist
         os.makedirs(self.commands_dir, exist_ok=True)
         os.makedirs(self.responses_dir, exist_ok=True)
-    
+
     def send_command(
         self,
         command_type: CommandType,
@@ -122,19 +122,19 @@ class SimulationIPCClient:
         poll_interval: float = 0.5
     ) -> IPCResponse:
         """
-        
-        
+        Send a command and wait for a response.
+
         Args:
-            command_type: 
-            args: 
-            timeout: （）
-            poll_interval: （）
-            
+            command_type: Command type
+            args: Command arguments
+            timeout: Timeout in seconds
+            poll_interval: Polling interval in seconds
+
         Returns:
             IPCResponse
-            
+
         Raises:
-            TimeoutError: 
+            TimeoutError: If no response within timeout
         """
         command_id = str(uuid.uuid4())
         command = IPCCommand(
@@ -142,50 +142,50 @@ class SimulationIPCClient:
             command_type=command_type,
             args=args
         )
-        
-        # 
+
+        # Write command file
         command_file = os.path.join(self.commands_dir, f"{command_id}.json")
         with open(command_file, 'w', encoding='utf-8') as f:
             json.dump(command.to_dict(), f, ensure_ascii=False, indent=2)
-        
-        logger.info(f"IPC: {command_type.value}, command_id={command_id}")
-        
-        # 
+
+        logger.info(f"IPC command sent: {command_type.value}, command_id={command_id}")
+
+        # Poll for response
         response_file = os.path.join(self.responses_dir, f"{command_id}.json")
         start_time = time.time()
-        
+
         while time.time() - start_time < timeout:
             if os.path.exists(response_file):
                 try:
                     with open(response_file, 'r', encoding='utf-8') as f:
                         response_data = json.load(f)
                     response = IPCResponse.from_dict(response_data)
-                    
-                    # 
+
+                    # Clean up files
                     try:
                         os.remove(command_file)
                         os.remove(response_file)
                     except OSError:
                         pass
-                    
-                    logger.info(f"IPC: command_id={command_id}, status={response.status.value}")
+
+                    logger.info(f"IPC response received: command_id={command_id}, status={response.status.value}")
                     return response
                 except (json.JSONDecodeError, KeyError) as e:
-                    logger.warning(f": {e}")
-            
+                    logger.warning(f"Failed to parse response file: {e}")
+
             time.sleep(poll_interval)
-        
-        # 
-        logger.error(f"IPC: command_id={command_id}")
-        
-        # 
+
+        # Timeout
+        logger.error(f"IPC command timed out: command_id={command_id}")
+
+        # Clean up command file
         try:
             os.remove(command_file)
         except OSError:
             pass
-        
-        raise TimeoutError(f" ({timeout})")
-    
+
+        raise TimeoutError(f"Command timed out ({timeout}s)")
+
     def send_interview(
         self,
         agent_id: int,
@@ -194,19 +194,19 @@ class SimulationIPCClient:
         timeout: float = 60.0
     ) -> IPCResponse:
         """
-        Agent
-        
+        Send an interview command to a single Agent.
+
         Args:
             agent_id: Agent ID
-            prompt: 
-            platform: （）
-                - "twitter": Twitter
-                - "reddit": Reddit  
-                - None: ，
-            timeout: 
-            
+            prompt: Interview prompt/question
+            platform: Platform context (optional)
+                - "twitter": Twitter environment
+                - "reddit": Reddit environment
+                - None: Default, auto-detect
+            timeout: Timeout in seconds
+
         Returns:
-            IPCResponse，result
+            IPCResponse with interview result in the result field
         """
         args = {
             "agent_id": agent_id,
@@ -214,13 +214,13 @@ class SimulationIPCClient:
         }
         if platform:
             args["platform"] = platform
-            
+
         return self.send_command(
             command_type=CommandType.INTERVIEW,
             args=args,
             timeout=timeout
         )
-    
+
     def send_batch_interview(
         self,
         interviews: List[Dict[str, Any]],
@@ -228,36 +228,36 @@ class SimulationIPCClient:
         timeout: float = 120.0
     ) -> IPCResponse:
         """
-        
-        
+        Send a batch interview command to multiple Agents.
+
         Args:
-            interviews: ， {"agent_id": int, "prompt": str, "platform": str()}
-            platform: （，platform）
-                - "twitter": Twitter
-                - "reddit": Reddit
-                - None: Agent
-            timeout: 
-            
+            interviews: List of interview specs, each {"agent_id": int, "prompt": str, "platform": str (optional)}
+            platform: Default platform for all interviews (individual platform fields take priority)
+                - "twitter": Twitter environment
+                - "reddit": Reddit environment
+                - None: Use each Agent's default
+            timeout: Timeout in seconds
+
         Returns:
-            IPCResponse，result
+            IPCResponse with batch results in the result field
         """
         args = {"interviews": interviews}
         if platform:
             args["platform"] = platform
-            
+
         return self.send_command(
             command_type=CommandType.BATCH_INTERVIEW,
             args=args,
             timeout=timeout
         )
-    
+
     def send_close_env(self, timeout: float = 30.0) -> IPCResponse:
         """
-        
-        
+        Send a command to close the simulation environment.
+
         Args:
-            timeout: 
-            
+            timeout: Timeout in seconds
+
         Returns:
             IPCResponse
         """
@@ -266,17 +266,17 @@ class SimulationIPCClient:
             args={},
             timeout=timeout
         )
-    
+
     def check_env_alive(self) -> bool:
         """
-        
-        
-         env_status.json 
+        Check if the simulation environment is still alive.
+
+        Reads the env_status.json file to determine status.
         """
         status_file = os.path.join(self.simulation_dir, "env_status.json")
         if not os.path.exists(status_file):
             return False
-        
+
         try:
             with open(status_file, 'r', encoding='utf-8') as f:
                 status = json.load(f)
@@ -287,106 +287,106 @@ class SimulationIPCClient:
 
 class SimulationIPCServer:
     """
-    IPC（）
-    
-    ，
+    IPC Server (used by simulation process)
+
+    Polls for command files and writes response files.
     """
-    
+
     def __init__(self, simulation_dir: str):
         """
-        IPC
-        
+        Initialize IPC server.
+
         Args:
-            simulation_dir: 
+            simulation_dir: Simulation data directory
         """
         self.simulation_dir = simulation_dir
         self.commands_dir = os.path.join(simulation_dir, "ipc_commands")
         self.responses_dir = os.path.join(simulation_dir, "ipc_responses")
-        
-        # 
+
+        # Ensure directories exist
         os.makedirs(self.commands_dir, exist_ok=True)
         os.makedirs(self.responses_dir, exist_ok=True)
-        
-        # 
+
+        # Server running state
         self._running = False
-    
+
     def start(self):
-        """"""
+        """Start the IPC server"""
         self._running = True
         self._update_env_status("alive")
-    
+
     def stop(self):
-        """"""
+        """Stop the IPC server"""
         self._running = False
         self._update_env_status("stopped")
-    
+
     def _update_env_status(self, status: str):
-        """"""
+        """Update environment status file"""
         status_file = os.path.join(self.simulation_dir, "env_status.json")
         with open(status_file, 'w', encoding='utf-8') as f:
             json.dump({
                 "status": status,
                 "timestamp": datetime.now().isoformat()
             }, f, ensure_ascii=False, indent=2)
-    
+
     def poll_commands(self) -> Optional[IPCCommand]:
         """
-        ，
-        
+        Poll for the oldest pending command.
+
         Returns:
-            IPCCommand  None
+            IPCCommand or None if no commands pending
         """
         if not os.path.exists(self.commands_dir):
             return None
-        
-        # 
+
+        # Get command files sorted by modification time (oldest first)
         command_files = []
         for filename in os.listdir(self.commands_dir):
             if filename.endswith('.json'):
                 filepath = os.path.join(self.commands_dir, filename)
                 command_files.append((filepath, os.path.getmtime(filepath)))
-        
+
         command_files.sort(key=lambda x: x[1])
-        
+
         for filepath, _ in command_files:
             try:
                 with open(filepath, 'r', encoding='utf-8') as f:
                     data = json.load(f)
                 return IPCCommand.from_dict(data)
             except (json.JSONDecodeError, KeyError, OSError) as e:
-                logger.warning(f": {filepath}, {e}")
+                logger.warning(f"Failed to parse command file: {filepath}, error: {e}")
                 continue
-        
+
         return None
-    
+
     def send_response(self, response: IPCResponse):
         """
-        
-        
+        Write a response file.
+
         Args:
-            response: IPC
+            response: IPC response object
         """
         response_file = os.path.join(self.responses_dir, f"{response.command_id}.json")
         with open(response_file, 'w', encoding='utf-8') as f:
             json.dump(response.to_dict(), f, ensure_ascii=False, indent=2)
-        
-        # 
+
+        # Remove the command file
         command_file = os.path.join(self.commands_dir, f"{response.command_id}.json")
         try:
             os.remove(command_file)
         except OSError:
             pass
-    
+
     def send_success(self, command_id: str, result: Dict[str, Any]):
-        """"""
+        """Send a success response"""
         self.send_response(IPCResponse(
             command_id=command_id,
             status=CommandStatus.COMPLETED,
             result=result
         ))
-    
+
     def send_error(self, command_id: str, error: str):
-        """"""
+        """Send an error response"""
         self.send_response(IPCResponse(
             command_id=command_id,
             status=CommandStatus.FAILED,

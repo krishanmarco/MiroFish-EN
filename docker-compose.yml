@@ -1,8 +1,8 @@
 services:
   mirofish:
-    image: docker.epilb.com/public/mirofish-en:985f89
+    image: docker.epilb.com/public/mirofish-en:2
     # Mirror for faster pulling if needed
-    # image: docker.epilb.com/public/mirofish-en:985f89
+    # image: docker.epilb.com/public/mirofish-en:2
     container_name: mirofish
     env_file:
       - .env

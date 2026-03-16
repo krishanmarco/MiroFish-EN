@@ -807,7 +807,7 @@ def _enrich_action_context(
                 if row and row[0]:
                     action_args['quote_content'] = row[0]
         
-        # Follow user：Supplement the name of followed user
+        # Follow user: Supplement the name of followed user
         elif action_type == 'FOLLOW':
             follow_id = action_args.get('follow_id')
             if follow_id:
@@ -822,7 +822,7 @@ def _enrich_action_context(
                     if target_name:
                         action_args['target_user_name'] = target_name
         
-        # Mute user：Supplement the name of muted user
+        # Mute user: Supplement the name of muted user
         elif action_type == 'MUTE':
             # Get user_id or target_id from action_args
             target_id = action_args.get('user_id') or action_args.get('target_id')
@@ -831,7 +831,7 @@ def _enrich_action_context(
                 if target_name:
                     action_args['target_user_name'] = target_name
         
-        # Like/dislike comments：Supplement comment content and author
+        # Like/dislike comments: Supplement comment content and author
         elif action_type in ('LIKE_COMMENT', 'DISLIKE_COMMENT'):
             comment_id = action_args.get('comment_id')
             if comment_id:
@@ -1246,7 +1246,7 @@ async def run_twitter_simulation(
             action_logger.log_round_start(round_num + 1, simulated_hour)
         
         if not active_agents:
-            # Also record round end when no active agents（actions_count=0）
+            # Also record round end when no active agents (actions_count=0)
             if action_logger:
                 action_logger.log_round_end(round_num + 1, 0)
             continue
@@ -1445,7 +1445,7 @@ async def run_reddit_simulation(
             action_logger.log_round_start(round_num + 1, simulated_hour)
         
         if not active_agents:
-            # Also record round end when no active agents（actions_count=0）
+            # Also record round end when no active agents (actions_count=0)
             if action_logger:
                 action_logger.log_round_end(round_num + 1, 0)
             continue

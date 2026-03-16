@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-IMAGE="docker.epilb.com/public/mirofish-en:985f89"
+IMAGE="docker.epilb.com/public/mirofish-en:2"
 
 # Check Docker daemon
 if ! docker info &>/dev/null; then

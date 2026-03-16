@@ -14,22 +14,22 @@
       <!-- Top Half: Hero Section -->
       <section class="hero-section">
         <div class="hero-left">
-          <div class=”tag-row”>
-            <span class=”orange-tag”>Simple & Universal Swarm Intelligence Engine</span>
-            <span class=”version-text”>/ v0.1-Preview</span>
+          <div class="tag-row">
+            <span class="orange-tag">Simple & Universal Swarm Intelligence Engine</span>
+            <span class="version-text">/ v0.1-Preview</span>
           </div>
 
-          <h1 class=”main-title”>
+          <h1 class="main-title">
             Upload Any Report<br>
-            <span class=”gradient-text”>Predict the Future Now</span>
+            <span class="gradient-text">Predict the Future Now</span>
           </h1>
 
-          <div class=”hero-desc”>
+          <div class="hero-desc">
             <p>
-              Even from a single paragraph, <span class=”highlight-bold”>MiroFish</span> can automatically generate a parallel world of up to <span class=”highlight-orange”>1M+ Agents</span> based on the reality seeds within. Inject variables from a god's-eye view and search for the <span class=”highlight-code”>”local optimum”</span> amid complex group interactions.
+              Even from a single paragraph, <span class="highlight-bold">MiroFish</span> can automatically generate a parallel world of up to <span class="highlight-orange">1M+ Agents</span> based on the reality seeds within. Inject variables from a god's-eye view and search for the <span class="highlight-code">"local optimum"</span> amid complex group interactions.
             </p>
-            <p class=”slogan-text”>
-              Let the future be rehearsed in Agent swarms, let decisions emerge from countless simulations<span class=”blinking-cursor”>_</span>
+            <p class="slogan-text">
+              Let the future be rehearsed in Agent swarms, let decisions emerge from countless simulations<span class="blinking-cursor">_</span>
             </p>
           </div>
            
