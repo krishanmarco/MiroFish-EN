@@ -3,11 +3,11 @@
 </template>
 
 <script setup>
-// 使用 Vue Router 来管理页面
+// Use Vue Router to manage pages
 </script>
 
 <style>
-/* 全局样式重置 */
+/* Global Style Reset */
 * {
   margin: 0;
   padding: 0;
@@ -22,7 +22,7 @@
   background-color: #ffffff;
 }
 
-/* 滚动条样式 */
+/* Scrollbar Styles */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -40,7 +40,7 @@
   background: #333333;
 }
 
-/* 全局按钮样式 */
+/* Global Button Styles */
 button {
   font-family: inherit;
 }
